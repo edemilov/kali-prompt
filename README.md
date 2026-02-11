@@ -31,3 +31,26 @@ bash <(curl -s https://raw.githubusercontent.com/edemilov/kali-prompt/main/insta
 
 # Or wget
 bash <(wget -qO- https://raw.githubusercontent.com/edemilov/kali-prompt/main/install-kali-prompt.sh)
+📦 Manual Installation
+bash
+
+git clone https://github.com/edemilov/kali-prompt.git
+cd kali-prompt
+chmod +x install-kali-prompt.sh
+./install-kali-prompt.sh
+
+🎨 What You Get
+Shell	Prompt	Command
+Bash	└─$ 	.bashrc
+Zsh	└─$> 	.zshrc
+Fish	└─> 	~/.config/fish/config.fish
+text
+
+┌─(edemilov@7800xtcachy)─[~]
+└─> fish
+
+┌─(edemilov@7800xtcachy)─[~]
+└─$ bash
+
+┌─(edemilov@7800xtcachy)─[~]
+└─$> zsh
