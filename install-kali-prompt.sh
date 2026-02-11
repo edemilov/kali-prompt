@@ -9,6 +9,25 @@
 # Author: edemilov
 # License: MIT
 
+# ============ FISH DETECTION & AUTO-RELAUNCH ============
+# If this script is run from Fish, relaunch in Bash
+if [ -n "$FISH_VERSION" ] || [ -n "$fish_pid" ]; then
+    echo "┌─($(tput setaf 1)KALI$(tput setaf 7)@$(tput setaf 4)FISH$(tput setaf 7))─[$(tput setaf 6)AUTO-RELAUNCH$(tput setaf 7)]"
+    echo "└─$(tput setaf 1)$ $(tput sgr0)Detected Fish shell. Relaunching in Bash..."
+    echo
+    exec bash "$0" "$@"
+    exit 0
+fi
+
+# ============ SHELL COMPATIBILITY CHECK ============
+# Ensure we're running in Bash or Zsh
+if [ -z "$BASH_VERSION" ] && [ -z "$ZSH_VERSION" ]; then
+    echo "❌ Error: This script must be run in Bash or Zsh."
+    echo "   Current shell: $(ps -p $$ -o comm=)"
+    echo "   Please run: bash install-kali-prompt.sh"
+    exit 1
+fi
+
 set -euo pipefail
 IFS=$'\n\t'
 
