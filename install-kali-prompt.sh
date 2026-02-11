@@ -230,11 +230,11 @@ setup_fish() {
     mkdir -p "$fish_config_dir"
     backup_file "$fish_config"
 
-    # Remove existing fish_prompt function
-    sed -i '/^# ----- Kali box prompt for Fish -----/,+20d' "$fish_config" 2>/dev/null || true
+    # Remove existing fish_prompt function completely
+    sed -i '/# ----- Kali box prompt for Fish -----/,/end/d' "$fish_config" 2>/dev/null || true
     sed -i '/function fish_prompt/,/end/d' "$fish_config" 2>/dev/null || true
 
-    # Add new prompt (FIXED - added missing newline)
+    # Add new prompt (FIXED - no extra 'end')
     cat >> "$fish_config" << 'EOF'
 
 # ----- Kali box prompt for Fish -----
