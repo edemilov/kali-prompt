@@ -9,7 +9,7 @@
 # Author: edemilov
 # License: MIT
 
-set -euo pipefail  # Better error handling
+set -euo pipefail
 IFS=$'\n\t'
 
 # ============ CONFIGURATION ============
@@ -23,7 +23,7 @@ BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 YELLOW='\033[1;33m'
 PURPLE='\033[0;35m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 BOLD='\033[1m'
 
 # ============ HEADER ============
@@ -60,39 +60,75 @@ EOF
 
 # ============ DETECT OS ============
 detect_os() {
+    # Default values
+    PKG_MANAGER="unknown"
+    INSTALL_CMD="echo 'Please install manually: '"
+    ZSH_PKG="zsh"
+    FISH_PKG="fish"
+    FONT_PKG="ttf-jetbrains-mono-nerd"  # Default for Arch
+
     if [[ -f /etc/os-release ]]; then
+        # Temporarily disable unbound variable check
+        set +u
         . /etc/os-release
-        OS=$ID
-        OS_VERSION=$VERSION_ID
+        OS=${ID:-linux}
+        OS_VERSION=${VERSION_ID:-}
+        set -u
     else
-        OS=$(uname -s)
+        OS=$(uname -s | tr '[:upper:]' '[:lower:]')
     fi
 
     case "$OS" in
-        arch|manjaro|endeavouros|cachyos)
+        arch|manjaro|endeavouros|cachyos|arcolinux|artix)
             PKG_MANAGER="pacman"
             INSTALL_CMD="sudo pacman -S --noconfirm"
             ZSH_PKG="zsh"
             FISH_PKG="fish"
             FONT_PKG="ttf-jetbrains-mono-nerd"
             ;;
-        ubuntu|debian|pop|linuxmint)
+        ubuntu|debian|pop|linuxmint|kali|raspbian|elementary|zorin)
             PKG_MANAGER="apt"
             INSTALL_CMD="sudo apt install -y"
             ZSH_PKG="zsh"
             FISH_PKG="fish"
             FONT_PKG="fonts-jetbrains-mono"
+            # Update package list silently
+            sudo apt update -y 2>/dev/null || true
             ;;
-        fedora|rhel|centos)
+        fedora|rhel|centos|rocky|alma)
             PKG_MANAGER="dnf"
             INSTALL_CMD="sudo dnf install -y"
             ZSH_PKG="zsh"
             FISH_PKG="fish"
             FONT_PKG="jetbrains-mono-fonts"
             ;;
+        opensuse*|suse)
+            PKG_MANAGER="zypper"
+            INSTALL_CMD="sudo zypper install -y"
+            ZSH_PKG="zsh"
+            FISH_PKG="fish"
+            FONT_PKG="jetbrains-mono-fonts"
+            ;;
         *)
-            PKG_MANAGER="unknown"
-            INSTALL_CMD="echo 'Please install: '"
+            # Fallback: detect by package manager presence
+            if command -v pacman &> /dev/null; then
+                PKG_MANAGER="pacman"
+                INSTALL_CMD="sudo pacman -S --noconfirm"
+                FONT_PKG="ttf-jetbrains-mono-nerd"
+            elif command -v apt &> /dev/null; then
+                PKG_MANAGER="apt"
+                INSTALL_CMD="sudo apt install -y"
+                FONT_PKG="fonts-jetbrains-mono"
+                sudo apt update -y 2>/dev/null || true
+            elif command -v dnf &> /dev/null; then
+                PKG_MANAGER="dnf"
+                INSTALL_CMD="sudo dnf install -y"
+                FONT_PKG="jetbrains-mono-fonts"
+            elif command -v zypper &> /dev/null; then
+                PKG_MANAGER="zypper"
+                INSTALL_CMD="sudo zypper install -y"
+                FONT_PKG="jetbrains-mono-fonts"
+            fi
             ;;
     esac
 }
@@ -105,7 +141,13 @@ install_shells() {
     detect_os
 
     if [[ "$PKG_MANAGER" != "unknown" ]]; then
-        $INSTALL_CMD $ZSH_PKG $FISH_PKG $FONT_PKG 2>/dev/null || true
+        echo -e "${CYAN}Detected package manager: ${PKG_MANAGER}${NC}"
+        $INSTALL_CMD $ZSH_PKG $FISH_PKG $FONT_PKG 2>/dev/null || {
+            echo -e "${YELLOW}⚠ Some packages failed to install. You may need to install manually:${NC}"
+            echo "  • $ZSH_PKG"
+            echo "  • $FISH_PKG"
+            echo "  • $FONT_PKG"
+        }
         echo -e "${GREEN}✓ Installation complete${NC}"
     else
         echo -e "${YELLOW}⚠ Could not detect package manager. Please install manually:${NC}"
@@ -138,13 +180,12 @@ setup_bash() {
     sed -i '/^__box_prompt/,/^}/d' "$bash_config" 2>/dev/null || true
     sed -i '/^PS1=.*┌─.*└─/d' "$bash_config" 2>/dev/null || true
 
-    # Add new prompt
+    # Add new prompt (FIXED)
     cat >> "$bash_config" << 'EOF'
 
 # ----- Kali box prompt for Bash -----
 # Source: https://github.com/edemilov/kali-prompt
-PS1='┌─\[$(tput setaf 1)\]\u\[$(tput setaf 7)\PS1='┌─\[$(tput setaf 1)\]\u\[$(tput setaf 7)\]@\[$(tput setaf 4)\]\h\[$(tput setaf 7)\]─[\[$(tput setaf 6)\]\w\[$(tput setaf 7]\]]\n└─\[$(tput setaf 1)\]$ \[$(tput sgr0)\]'
-]@\[$(tput setaf 4)\]\h\[$(tput setaf 7)\]─[\[$(tput setaf 6)\]\w\[$(tput setaf 7]\]]\n└─\[$(tput setaf 1)\]$ \[$(tput sgr0)\]'
+PS1='┌─\[$(tput setaf 1)\]\[\e[1m\]\u\[$(tput sgr0)\]\[$(tput setaf 7)\]@\[$(tput setaf 4)\]\[\e[1m\]\h\[$(tput sgr0)\]\[$(tput setaf 7)\]─[\[$(tput setaf 6)\]\[\e[1m\]\w\[$(tput sgr0)\]\[$(tput setaf 7)\]]\n└─\[$(tput setaf 1)\]\[\e[1m\]$ \[$(tput sgr0)\]'
 EOF
 
     echo -e "${GREEN}✅ Bash prompt installed${NC}"
@@ -158,10 +199,19 @@ setup_zsh() {
     local zsh_config="$HOME/.zshrc"
     backup_file "$zsh_config"
 
+    # Remove Oh-My-Zsh and Powerlevel10k if present
+    if command -v pacman &> /dev/null; then
+        sudo pacman -Rns powerlevel10k oh-my-zsh 2>/dev/null || true
+    fi
+    rm -f "$HOME/.p10k.zsh" 2>/dev/null || true
+    rm -rf "$HOME/.oh-my-zsh" 2>/dev/null || true
+
+    # Create fresh .zshrc with our prompt (FIXED - uses PROMPT not PS1)
     cat > "$zsh_config" << 'EOF'
 # ----- Kali box prompt for Zsh -----
 # Source: https://github.com/edemilov/kali-prompt
-PROMPT=$'%{\e[0m%}┌─(%{\e[31m%}%n%{\e[97m%}@%{\e[34m%}%m%{\e[97m%})─[%{\e[36m%}%~%{\e[97m%}]\n└─%{\e[31m%}$> %{\e[0m%}'
+PROMPT='┌─%F{red}%B%n%f%b%F{white}@%F{blue}%B%m%f%b%F{white}─[%F{cyan}%B%~%f%b%F{white}]
+└─%F{red}%B$> %f%b%k'
 RPROMPT=''
 EOF
 
@@ -184,16 +234,16 @@ setup_fish() {
     sed -i '/^# ----- Kali box prompt for Fish -----/,+20d' "$fish_config" 2>/dev/null || true
     sed -i '/function fish_prompt/,/end/d' "$fish_config" 2>/dev/null || true
 
-    # Add new prompt
+    # Add new prompt (FIXED - added missing newline)
     cat >> "$fish_config" << 'EOF'
 
 # ----- Kali box prompt for Fish -----
 # Source: https://github.com/edemilov/kali-prompt
 function fish_prompt
-    set -l red (set_color red)
-    set -l blue (set_color blue)
+    set -l red (set_color red --bold)
+    set -l blue (set_color blue --bold)
     set -l white (set_color white)
-    set -l cyan (set_color cyan)
+    set -l cyan (set_color cyan --bold)
     set -l gray (set_color brblack)
     set -l normal (set_color normal)
 
@@ -220,21 +270,31 @@ EOF
 # ============ SET DEFAULT SHELL ============
 set_default_shell() {
     local shell_choice="$1"
+    local shell_path
 
     case $shell_choice in
         bash)
-            chsh -s "$(which bash)" && echo -e "${GREEN}✅ Default shell changed to Bash${NC}"
+            shell_path=$(which bash)
             ;;
         zsh)
-            chsh -s "$(which zsh)" && echo -e "${GREEN}✅ Default shell changed to Zsh${NC}"
+            shell_path=$(which zsh)
             ;;
         fish)
-            chsh -s "$(which fish)" && echo -e "${GREEN}✅ Default shell changed to Fish${NC}"
+            shell_path=$(which fish)
             ;;
         *)
             return
             ;;
     esac
+
+    if [[ -n "$shell_path" ]]; then
+        if chsh -s "$shell_path" 2>/dev/null; then
+            echo -e "${GREEN}✅ Default shell changed to ${shell_choice}${NC}"
+        else
+            echo -e "${YELLOW}⚠ Could not change shell. You may need to:${NC}"
+            echo "  sudo chsh -s $shell_path $USER"
+        fi
+    fi
 }
 
 # ============ UNINSTALL ============
@@ -245,10 +305,15 @@ uninstall() {
     # Restore backups
     for rc in .bashrc .zshrc .config/fish/config.fish; do
         local file="$HOME/$rc"
+        # Find most recent backup
         local backup=$(ls -t "$file".kali-backup-* 2>/dev/null | head -1)
         if [[ -f "$backup" ]]; then
             cp "$backup" "$file"
             echo -e "${GREEN}✓ Restored $file from backup${NC}"
+        elif [[ -f "$file" ]]; then
+            # No backup found, remove our lines
+            sed -i '/# ----- Kali box prompt for /,/^[^#]/d' "$file" 2>/dev/null || true
+            echo -e "${GREEN}✓ Removed prompt from $file${NC}"
         fi
     done
 
