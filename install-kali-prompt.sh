@@ -143,7 +143,8 @@ setup_bash() {
 
 # ----- Kali box prompt for Bash -----
 # Source: https://github.com/edemilov/kali-prompt
-PS1='┌─\[$(tput setaf 1)\]\u\[$(tput setaf 7)\]@\[$(tput setaf 4)\]\h\[$(tput setaf 7)\]─[\[$(tput setaf 6)\]\w\[$(tput setaf 7]\]]\n└─\[$(tput setaf 1)\]$ \[$(tput sgr0)\]'
+PS1='┌─\[$(tput setaf 1)\]\u\[$(tput setaf 7)\PS1='┌─\[$(tput setaf 1)\]\u\[$(tput setaf 7)\]@\[$(tput setaf 4)\]\h\[$(tput setaf 7)\]─[\[$(tput setaf 6)\]\w\[$(tput setaf 7]\]]\n└─\[$(tput setaf 1)\]$ \[$(tput sgr0)\]'
+]@\[$(tput setaf 4)\]\h\[$(tput setaf 7)\]─[\[$(tput setaf 6)\]\w\[$(tput setaf 7]\]]\n└─\[$(tput setaf 1)\]$ \[$(tput sgr0)\]'
 EOF
 
     echo -e "${GREEN}✅ Bash prompt installed${NC}"
