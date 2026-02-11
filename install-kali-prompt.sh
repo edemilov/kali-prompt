@@ -175,12 +175,6 @@ setup_bash() {
     local bash_config="$HOME/.bashrc"
     backup_file "$bash_config"
 
-    # Remove existing Kali prompts
-    sed -i '/# ----- Kali box prompt for Bash -----/,+1d' "$bash_config" 2>/dev/null || true
-    sed -i '/^__box_prompt/,/^}/d' "$bash_config" 2>/dev/null || true
-    sed -i '/^PS1=.*┌─.*└─/d' "$bash_config" 2>/dev/null || true
-
-    # Add new prompt (FIXED)
     cat >> "$bash_config" << 'EOF'
 
 # ----- Kali box prompt for Bash -----
@@ -199,14 +193,6 @@ setup_zsh() {
     local zsh_config="$HOME/.zshrc"
     backup_file "$zsh_config"
 
-    # Remove Oh-My-Zsh and Powerlevel10k if present
-    if command -v pacman &> /dev/null; then
-        sudo pacman -Rns powerlevel10k oh-my-zsh 2>/dev/null || true
-    fi
-    rm -f "$HOME/.p10k.zsh" 2>/dev/null || true
-    rm -rf "$HOME/.oh-my-zsh" 2>/dev/null || true
-
-    # Create fresh .zshrc with our prompt (FIXED - uses PROMPT not PS1)
     cat > "$zsh_config" << 'EOF'
 # ----- Kali box prompt for Zsh -----
 # Source: https://github.com/edemilov/kali-prompt
@@ -230,11 +216,13 @@ setup_fish() {
     mkdir -p "$fish_config_dir"
     backup_file "$fish_config"
 
-    # Remove existing fish_prompt function completely
-    sed -i '/# ----- Kali box prompt for Fish -----/,/end/d' "$fish_config" 2>/dev/null || true
-    sed -i '/function fish_prompt/,/end/d' "$fish_config" 2>/dev/null || true
+    if [[ -f "$fish_config" ]]; then
+        sed -i '/# ----- Kali box prompt for Fish -----/,/end/d' "$fish_config"
+        sed -i '/function fish_prompt/,/end/d' "$fish_config"
+        sed -i -e :a -e '/^\n*$/{$d;N;ba' -e '}' "$fish_config"
+    fi
 
-    # Add new prompt (FIXED - no extra 'end')
+    echo >> "$fish_config"  # Add newline if needed
     cat >> "$fish_config" << 'EOF'
 
 # ----- Kali box prompt for Fish -----
