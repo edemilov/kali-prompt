@@ -158,16 +158,6 @@ setup_zsh() {
     local zsh_config="$HOME/.zshrc"
     backup_file "$zsh_config"
 
-    # Remove Powerlevel10k and Oh-My-Zsh if present
-    if command -v pacman &> /dev/null; then
-        sudo pacman -Rns powerlevel10k oh-my-zsh 2>/dev/null || true
-    fi
-
-    # Clean up existing configs
-    rm -f "$HOME/.p10k.zsh" 2>/dev/null || true
-    rm -rf "$HOME/.oh-my-zsh" 2>/dev/null || true
-
-    # Create fresh .zshrc with our prompt
     cat > "$zsh_config" << 'EOF'
 # ----- Kali box prompt for Zsh -----
 # Source: https://github.com/edemilov/kali-prompt
